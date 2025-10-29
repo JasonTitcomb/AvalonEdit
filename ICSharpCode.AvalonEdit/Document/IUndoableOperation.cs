@@ -24,7 +24,12 @@ namespace ICSharpCode.AvalonEdit.Document
 	/// </summary>
 	public interface IUndoableOperation
 	{
+	
 		/// <summary>
+		/// Operation type
+		/// </summary>
+		int OpType { get; set; }
+	/// <summary>
 		/// Undo the last operation
 		/// </summary>
 		void Undo();

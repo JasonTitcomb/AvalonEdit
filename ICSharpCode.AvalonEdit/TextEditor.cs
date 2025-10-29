@@ -538,7 +538,7 @@ namespace ICSharpCode.AvalonEdit
 		/// </summary>
 		public void BeginChange()
 		{
-			GetDocument().BeginUpdate();
+			GetDocument().BeginUpdate(this.Document.UndoStack.ReasonForStackChange);
 		}
 
 		/// <summary>

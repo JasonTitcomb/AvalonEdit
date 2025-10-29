@@ -30,8 +30,10 @@ namespace ICSharpCode.AvalonEdit.Document
 	sealed class UndoOperationGroup : IUndoableOperationWithContext
 	{
 		IUndoableOperation[] undolist;
+		public string Description { get; set; }
+		public int OpType { get; set; }
 
-		public UndoOperationGroup(Deque<IUndoableOperation> stack, int numops)
+		public UndoOperationGroup(Deque<IUndoableOperation> stack, int numops,string desc)
 		{
 			if (stack == null) {
 				throw new ArgumentNullException("stack");
@@ -39,6 +41,7 @@ namespace ICSharpCode.AvalonEdit.Document
 
 			Debug.Assert(numops > 0, "UndoOperationGroup : numops should be > 0");
 			Debug.Assert(numops <= stack.Count);
+			Description = desc;
 
 			undolist = new IUndoableOperation[numops];
 			for (int i = 0; i < numops; ++i) {

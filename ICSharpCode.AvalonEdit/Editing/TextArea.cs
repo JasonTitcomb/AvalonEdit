@@ -336,6 +336,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 			WeakReference textAreaReference;
 			TextViewPosition caretPosition;
 			Selection selection;
+			public int OpType { get; set; }
 
 			public RestoreCaretAndSelectionUndoAction(TextArea textArea)
 			{

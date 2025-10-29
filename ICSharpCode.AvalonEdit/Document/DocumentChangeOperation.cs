@@ -27,6 +27,7 @@ namespace ICSharpCode.AvalonEdit.Document
 	{
 		TextDocument document;
 		DocumentChangeEventArgs change;
+		public int OpType { get; set; }
 
 		public DocumentChangeOperation(TextDocument document, DocumentChangeEventArgs change)
 		{

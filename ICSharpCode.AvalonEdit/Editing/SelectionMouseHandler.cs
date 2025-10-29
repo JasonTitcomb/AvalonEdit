@@ -343,7 +343,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 				bool draggedInsideSingleDocument = (dragDescriptor == textArea.Document.UndoStack.LastGroupDescriptor);
 				if (draggedInsideSingleDocument)
 					textArea.Document.UndoStack.StartContinuedUndoGroup(null);
-				textArea.Document.BeginUpdate();
+					textArea.Document.BeginUpdate(textArea.Document.UndoStack.ReasonForStackChange);
 				try {
 					foreach (ISegment s in deleteOnMove) {
 						textArea.Document.Remove(s.Offset, s.Length);

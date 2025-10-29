@@ -43,6 +43,8 @@ namespace ICSharpCode.AvalonEdit.Document
 
 		Deque<IUndoableOperation> undostack = new Deque<IUndoableOperation>();
 		Deque<IUndoableOperation> redostack = new Deque<IUndoableOperation>();
+		Deque<string> undostackDesc = new Deque<string>();
+		Deque<string> redostackDesc = new Deque<string>();
 		int sizeLimit = int.MaxValue;
 
 		int undoGroupDepth;
@@ -50,6 +52,28 @@ namespace ICSharpCode.AvalonEdit.Document
 		int optionalActionCount;
 		object lastGroupDescriptor;
 		bool allowContinue;
+		public int OpType;
+		public string ReasonForStackChange;
+		public List<string> GetUndoList()
+		{
+			List<string> undo = new List<string>();
+			if (undostackDesc.Count >= 1) {
+				foreach (string op in undostackDesc) {
+					undo.Add(op);
+				}
+			}
+			return undo;
+		}
+		public List<string> GetRedoList()
+		{
+			List<string> redo = new List<string>();
+			if (redostackDesc.Count >= 1) {
+				foreach (string op in redostackDesc) {
+					redo.Add(op);
+				}
+			}
+			return redo;
+		}
 
 		#region IsOriginalFile implementation
 		// implements feature request SD2-784 - File still considered dirty after undoing all changes
@@ -239,7 +263,10 @@ namespace ICSharpCode.AvalonEdit.Document
 					allowContinue = false;
 				} else if (actionCountInUndoGroup > 1) {
 					// combine all actions within the group into a single grouped action
-					undostack.PushBack(new UndoOperationGroup(undostack, actionCountInUndoGroup));
+					string desc = (lastGroupDescriptor == null) ? "" : lastGroupDescriptor.ToString();
+					UndoOperationGroup ud = new UndoOperationGroup(undostack, actionCountInUndoGroup, desc);
+					ud.OpType = OpType;
+					undostack.PushBack(ud);
 					FileModified(-actionCountInUndoGroup + 1 + optionalActionCount);
 				}
 				//if (state == StateListen) {
@@ -271,7 +298,7 @@ namespace ICSharpCode.AvalonEdit.Document
 				affectedDocuments = new List<TextDocument>();
 			if (!affectedDocuments.Contains(document)) {
 				affectedDocuments.Add(document);
-				document.BeginUpdate();
+				document.BeginUpdate(ReasonForStackChange);
 			}
 		}
 
@@ -283,6 +310,10 @@ namespace ICSharpCode.AvalonEdit.Document
 				}
 				affectedDocuments = null;
 			}
+		}
+		public void SetReasonForStackChange(string reason)
+		{
+			if (ReasonForStackChange == null) ReasonForStackChange = reason;
 		}
 
 		/// <summary>
@@ -297,6 +328,8 @@ namespace ICSharpCode.AvalonEdit.Document
 				// fetch operation to undo and move it to redo stack
 				IUndoableOperation uedit = undostack.PopBack();
 				redostack.PushBack(uedit);
+				ReasonForStackChange = undostackDesc.PopBack();
+				redostackDesc.PushBack(ReasonForStackChange);
 				state = StatePlayback;
 				try {
 					RunUndo(uedit);
@@ -316,10 +349,14 @@ namespace ICSharpCode.AvalonEdit.Document
 		internal void RunUndo(IUndoableOperation op)
 		{
 			IUndoableOperationWithContext opWithCtx = op as IUndoableOperationWithContext;
-			if (opWithCtx != null)
+			if (op is DocumentChangeOperation)
+				NotifyBeforeChange(ReasonForStackChange, opWithCtx.OpType, true);
+			if (opWithCtx != null) {
 				opWithCtx.Undo(this);
-			else
+			} else
 				op.Undo();
+			if (op is DocumentChangeOperation)
+				NotifyAfterChange(ReasonForStackChange, opWithCtx.OpType, true);
 		}
 
 		/// <summary>
@@ -331,7 +368,9 @@ namespace ICSharpCode.AvalonEdit.Document
 			if (redostack.Count > 0) {
 				lastGroupDescriptor = null; allowContinue = false;
 				IUndoableOperation uedit = redostack.PopBack();
+				ReasonForStackChange = redostackDesc.PopBack();
 				undostack.PushBack(uedit);
+				undostackDesc.PushBack(ReasonForStackChange);
 				state = StatePlayback;
 				try {
 					RunRedo(uedit);
@@ -351,10 +390,14 @@ namespace ICSharpCode.AvalonEdit.Document
 		internal void RunRedo(IUndoableOperation op)
 		{
 			IUndoableOperationWithContext opWithCtx = op as IUndoableOperationWithContext;
-			if (opWithCtx != null)
+			if (op is DocumentChangeOperation)
+				NotifyBeforeChange(ReasonForStackChange, opWithCtx.OpType, false);
+			if (opWithCtx != null) {
 				opWithCtx.Redo(this);
-			else
+			} else
 				op.Redo();
+			if (op is DocumentChangeOperation)
+				NotifyAfterChange(ReasonForStackChange, opWithCtx.OpType, false);
 		}
 
 		/// <summary>
@@ -391,7 +434,15 @@ namespace ICSharpCode.AvalonEdit.Document
 
 				bool needsUndoGroup = undoGroupDepth == 0;
 				if (needsUndoGroup) StartUndoGroup();
+
+				operation.OpType = this.OpType;
 				undostack.PushBack(operation);
+				if (actionCountInUndoGroup == 0) {
+					undostackDesc.PushBack(ReasonForStackChange);
+					//raise event here
+					NotifyAfterPush(ReasonForStackChange, operation.OpType, false);
+					ReasonForStackChange = null;
+				}
 				actionCountInUndoGroup++;
 				if (isOptional)
 					optionalActionCount++;
@@ -411,6 +462,7 @@ namespace ICSharpCode.AvalonEdit.Document
 		{
 			if (redostack.Count != 0) {
 				redostack.Clear();
+				redostackDesc.Clear();
 				NotifyPropertyChanged("CanRedo");
 				// if the "original file" marker is on the redo stack: remove it
 				if (elementsOnUndoUntilOriginalFile < 0)
@@ -424,6 +476,8 @@ namespace ICSharpCode.AvalonEdit.Document
 		public void ClearAll()
 		{
 			ThrowIfUndoGroupOpen();
+			undostackDesc.Clear();
+			redostackDesc.Clear();
 			actionCountInUndoGroup = 0;
 			optionalActionCount = 0;
 			if (undostack.Count != 0) {
@@ -454,6 +508,26 @@ namespace ICSharpCode.AvalonEdit.Document
 		{
 			if (PropertyChanged != null)
 				PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+		}
+		public event EventHandler<UndoRedoEventArgs> BeforeDocumentChangeOperation;
+		internal void NotifyBeforeChange(string reason, int optype, bool isundo)
+		{
+			if (BeforeDocumentChangeOperation != null)
+				BeforeDocumentChangeOperation(this, new UndoRedoEventArgs(reason, optype, isundo));
+		}
+
+		public event EventHandler<UndoRedoEventArgs> AfterDocumentChangeOperation;
+		internal void NotifyAfterChange(string reason, int optype, bool isundo)
+		{
+			if (AfterDocumentChangeOperation != null)
+				AfterDocumentChangeOperation(this, new UndoRedoEventArgs(reason, optype, isundo));
+		}
+
+		public event EventHandler<UndoRedoEventArgs> AfterPushOperation;
+		internal void NotifyAfterPush(string reason, int optype, bool isundo)
+		{
+			if (AfterPushOperation != null)
+				AfterPushOperation(this, new UndoRedoEventArgs(reason, optype, isundo));
 		}
 	}
 }

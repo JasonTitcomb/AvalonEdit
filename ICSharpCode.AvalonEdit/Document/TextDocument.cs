@@ -409,7 +409,7 @@ namespace ICSharpCode.AvalonEdit.Document
 		/// <remarks><inheritdoc cref="BeginUpdate"/></remarks>
 		public IDisposable RunUpdate()
 		{
-			BeginUpdate();
+			BeginUpdate(this.undoStack.ReasonForStackChange);
 			return new CallbackOnDispose(EndUpdate);
 		}
 
@@ -421,14 +421,14 @@ namespace ICSharpCode.AvalonEdit.Document
 		/// of EndUpdate calls the events resume their work.</para>
 		/// </summary>
 		/// <remarks><inheritdoc cref="Changing"/></remarks>
-		public void BeginUpdate()
+		public void BeginUpdate(string description)
 		{
 			VerifyAccess();
 			if (inDocumentChanging)
 				throw new InvalidOperationException("Cannot change document within another document change.");
 			beginUpdateCount++;
 			if (beginUpdateCount == 1) {
-				undoStack.StartUndoGroup();
+				undoStack.StartUndoGroup(description);
 				if (UpdateStarted != null)
 					UpdateStarted(this, EventArgs.Empty);
 			}
@@ -472,7 +472,7 @@ namespace ICSharpCode.AvalonEdit.Document
 
 		void IDocument.StartUndoableAction()
 		{
-			BeginUpdate();
+			BeginUpdate("");
 		}
 
 		void IDocument.EndUndoableAction()
@@ -769,7 +769,7 @@ namespace ICSharpCode.AvalonEdit.Document
 
 			// Ensure that all changes take place inside an update group.
 			// Will also take care of throwing an exception if inDocumentChanging is set.
-			BeginUpdate();
+			BeginUpdate(this.undoStack.ReasonForStackChange);
 			try {
 				// protect document change against corruption by other changes inside the event handlers
 				inDocumentChanging = true;
