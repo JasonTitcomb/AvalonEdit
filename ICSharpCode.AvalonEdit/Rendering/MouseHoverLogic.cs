@@ -31,6 +31,7 @@ namespace ICSharpCode.AvalonEdit.Rendering
 		UIElement target;
 
 		DispatcherTimer mouseHoverTimer;
+		TimeSpan hovertime = SystemParameters.MouseHoverTime;
 		Point mouseHoverStartPoint;
 		MouseEventArgs mouseHoverLastEventArgs;
 		bool mouseHovering;
@@ -64,12 +65,24 @@ namespace ICSharpCode.AvalonEdit.Rendering
 			// do not set e.Handled - allow others to also handle MouseEnter
 		}
 
+		/// <summary>
+		/// Sets the interval for hover actions in milliseconds.
+		/// </summary>
+		/// <remarks>This method updates the hover time interval, which determines how long a hover action should
+		/// last.</remarks>
+		/// <param name="mil">The duration in milliseconds to set for the hover interval. Must be non-negative.</param>
+		public void SetHoverInterval(int mil)
+		{
+			hovertime = new TimeSpan(0, 0, 0, 0, mil);
+		}
+
+
 		void StartHovering(MouseEventArgs e)
 		{
 			StopHovering();
 			mouseHoverStartPoint = e.GetPosition(this.target);
 			mouseHoverLastEventArgs = e;
-			mouseHoverTimer = new DispatcherTimer(SystemParameters.MouseHoverTime, DispatcherPriority.Background, OnMouseHoverTimerElapsed, this.target.Dispatcher);
+			mouseHoverTimer = new DispatcherTimer(hovertime, DispatcherPriority.Background, OnMouseHoverTimerElapsed, this.target.Dispatcher);
 			mouseHoverTimer.Start();
 		}
 

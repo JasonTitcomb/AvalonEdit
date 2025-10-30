@@ -47,7 +47,8 @@ namespace ICSharpCode.AvalonEdit
 
 			// copy each value over to 'this'
 			foreach (FieldInfo fi in fields) {
-				if (!fi.IsNotSerialized)
+				// Instead of using IsNotSerialized (obsolete), skip fields marked with [NonSerialized] attribute
+				if (fi.GetCustomAttribute(typeof(NonSerializedAttribute)) == null)
 					fi.SetValue(this, fi.GetValue(options));
 			}
 		}
@@ -231,7 +232,27 @@ namespace ICSharpCode.AvalonEdit
 				}
 			}
 		}
-
+		int globalindent = 0;
+		/// <summary>
+		/// Gets/Sets the width of global indentation.
+		/// </summary>
+		/// <remarks>The default value is 0.</remarks>
+		[DefaultValue(0)]
+		public virtual int DefaultIndent {
+			get { return globalindent; }
+			set {
+				if (value < 1)
+					throw new ArgumentOutOfRangeException("value", value, "value must be positive");
+				// sanity check; a too large value might cause WPF to crash internally much later
+				// (it only crashed in the hundred thousands for me; but might crash earlier with larger fonts)
+				if (value > 100)
+					throw new ArgumentOutOfRangeException("value", value, "indentation size is too large");
+				if (globalindent != value) {
+					globalindent = value;
+					OnPropertyChanged("DefaultIndent");
+				}
+			}
+		}
 		bool convertTabsToSpaces;
 
 		/// <summary>

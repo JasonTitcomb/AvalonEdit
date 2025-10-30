@@ -232,6 +232,7 @@ namespace ICSharpCode.AvalonEdit.Document
 				VerifyAccess();
 				if (value == null)
 					throw new ArgumentNullException("value");
+				undoStack.SetReasonForStackChange("Set text");
 				Replace(0, rope.Length, value);
 			}
 		}
@@ -586,6 +587,7 @@ namespace ICSharpCode.AvalonEdit.Document
 		/// </param>
 		public void Insert(int offset, ITextSource text, AnchorMovementType defaultAnchorMovementType)
 		{
+			undoStack.SetReasonForStackChange("Insert");
 			if (defaultAnchorMovementType == AnchorMovementType.BeforeInsertion) {
 				Replace(offset, 0, text, OffsetChangeMappingType.KeepAnchorBeforeInsertion);
 			} else {
@@ -608,6 +610,7 @@ namespace ICSharpCode.AvalonEdit.Document
 		/// <param name="length">Length of the text to be removed.</param>
 		public void Remove(int offset, int length)
 		{
+			undoStack.SetReasonForStackChange("Remove");
 			Replace(offset, length, StringTextSource.Empty);
 		}
 
@@ -680,6 +683,8 @@ namespace ICSharpCode.AvalonEdit.Document
 		{
 			if (text == null)
 				throw new ArgumentNullException("text");
+			undoStack.SetReasonForStackChange("Replace");
+
 			// Please see OffsetChangeMappingType XML comments for details on how these modes work.
 			switch (offsetChangeMappingType) {
 				case OffsetChangeMappingType.Normal:
@@ -766,6 +771,7 @@ namespace ICSharpCode.AvalonEdit.Document
 			text = text.CreateSnapshot();
 			if (offsetChangeMap != null)
 				offsetChangeMap.Freeze();
+			undoStack.SetReasonForStackChange("Replace");
 
 			// Ensure that all changes take place inside an update group.
 			// Will also take care of throwing an exception if inDocumentChanging is set.

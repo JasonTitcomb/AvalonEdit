@@ -81,6 +81,10 @@ namespace ICSharpCode.AvalonEdit.Rendering
 			this.hoverLogic.MouseHover += (sender, e) => RaiseHoverEventPair(e, PreviewMouseHoverEvent, MouseHoverEvent);
 			this.hoverLogic.MouseHoverStopped += (sender, e) => RaiseHoverEventPair(e, PreviewMouseHoverStoppedEvent, MouseHoverStoppedEvent);
 		}
+		public void SetHoverInterval(int mil)
+		{
+			this.hoverLogic.SetHoverInterval(mil);
+		}
 
 		#endregion
 

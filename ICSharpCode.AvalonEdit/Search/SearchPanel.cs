@@ -353,6 +353,17 @@ namespace ICSharpCode.AvalonEdit.Search
 				SelectResult(result);
 			}
 		}
+		/// <summary>
+		/// Highlighta all.
+		/// </summary>
+		public void ShowAllResults()
+		{
+			if (renderer != null) {
+				//SearchResult result = renderer.CurrentResults;
+				//Jason
+				textArea.TextView.BackgroundRenderers.Add(renderer);
+			}
+		}
 
 		/// <summary>
 		/// Moves to the previous occurrence in the file.
@@ -371,7 +382,7 @@ namespace ICSharpCode.AvalonEdit.Search
 
 		ToolTip messageView = new ToolTip { Placement = PlacementMode.Bottom, StaysOpen = true, Focusable = false };
 
-		void DoSearch(bool changeSelection)
+		public void DoSearch(bool changeSelection)
 		{
 			if (IsClosed)
 				return;
@@ -470,7 +481,7 @@ namespace ICSharpCode.AvalonEdit.Search
 			var layer = AdornerLayer.GetAdornerLayer(textArea);
 			if (layer != null)
 				layer.Add(adorner);
-			textArea.TextView.BackgroundRenderers.Add(renderer);
+			//textArea.TextView.BackgroundRenderers.Add(renderer);
 			IsClosed = false;
 			DoSearch(false);
 		}

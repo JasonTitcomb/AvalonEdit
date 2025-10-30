@@ -54,6 +54,12 @@ namespace ICSharpCode.AvalonEdit.Document
 		bool allowContinue;
 		public int OpType;
 		public string ReasonForStackChange;
+		
+		/// <summary>
+		/// Retrieves a list of descriptions for the operations that can be undone.
+		/// </summary>
+		/// <returns>A list of strings containing the descriptions of undoable operations. The list will be empty if there are no
+		/// operations to undo.</returns>
 		public List<string> GetUndoList()
 		{
 			List<string> undo = new List<string>();
@@ -64,6 +70,12 @@ namespace ICSharpCode.AvalonEdit.Document
 			}
 			return undo;
 		}
+		
+		/// <summary>
+		/// Retrieves a list of descriptions for operations that can be redone.
+		/// </summary>
+		/// <returns>A list of strings containing the descriptions of redoable operations. The list will be empty if there are no
+		/// operations available for redo.</returns>
 		public List<string> GetRedoList()
 		{
 			List<string> redo = new List<string>();
@@ -311,6 +323,11 @@ namespace ICSharpCode.AvalonEdit.Document
 				affectedDocuments = null;
 			}
 		}
+		/// <summary>
+		/// Sets the reason for the stack change. This reason is used to describe the operation
+		/// that caused a change in the undo/redo stack.
+		/// </summary>
+		/// <param name="reason">A string describing the reason for the stack change.</param>
 		public void SetReasonForStackChange(string reason)
 		{
 			if (ReasonForStackChange == null) ReasonForStackChange = reason;

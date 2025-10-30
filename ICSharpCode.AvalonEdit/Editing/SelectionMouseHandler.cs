@@ -216,6 +216,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 					} else {
 						Debug.WriteLine("Drop: insert at " + start);
 
+						textArea.Document.UndoStack.SetReasonForStackChange("Drop: at " + textArea.Caret.Line);
 						var pastingEventArgs = new DataObjectPastingEventArgs(e.Data, true, DataFormats.UnicodeText);
 						textArea.RaiseEvent(pastingEventArgs);
 						if (pastingEventArgs.CommandCancelled)
@@ -294,6 +295,8 @@ namespace ICSharpCode.AvalonEdit.Editing
 
 		void StartDrag()
 		{
+			if (!textArea.AllowEditing) return;
+
 			// mouse capture and Drag'n'Drop doesn't mix
 			textArea.ReleaseMouseCapture();
 
@@ -343,7 +346,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 				bool draggedInsideSingleDocument = (dragDescriptor == textArea.Document.UndoStack.LastGroupDescriptor);
 				if (draggedInsideSingleDocument)
 					textArea.Document.UndoStack.StartContinuedUndoGroup(null);
-					textArea.Document.BeginUpdate(textArea.Document.UndoStack.ReasonForStackChange);
+				textArea.Document.BeginUpdate(textArea.Document.UndoStack.ReasonForStackChange);
 				try {
 					foreach (ISegment s in deleteOnMove) {
 						textArea.Document.Remove(s.Offset, s.Length);

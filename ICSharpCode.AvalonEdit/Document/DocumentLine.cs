@@ -47,6 +47,7 @@ namespace ICSharpCode.AvalonEdit.Document
 #endif
 
 		internal bool isDeleted;
+		public bool IsBookmarked;
 
 		internal DocumentLine(TextDocument document)
 		{

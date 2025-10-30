@@ -17,6 +17,7 @@
 // DEALINGS IN THE SOFTWARE.
 
 using System;
+
 using NUnit.Framework;
 
 namespace ICSharpCode.AvalonEdit.Document
@@ -34,7 +35,7 @@ namespace ICSharpCode.AvalonEdit.Document
 			doc.UndoStack.Undo();
 			Assert.That(doc.Text, Is.Empty);
 		}
-		
+
 		[Test]
 		public void ContinueEmptyUndoGroup()
 		{
@@ -48,7 +49,7 @@ namespace ICSharpCode.AvalonEdit.Document
 			doc.UndoStack.Undo();
 			Assert.That(doc.Text, Is.EqualTo("a"));
 		}
-		
+
 		[Test]
 		public void ContinueEmptyUndoGroup_WithOptionalEntries()
 		{
@@ -63,7 +64,7 @@ namespace ICSharpCode.AvalonEdit.Document
 			doc.UndoStack.Undo();
 			Assert.That(doc.Text, Is.EqualTo("a"));
 		}
-		
+
 		[Test]
 		public void EmptyContinuationGroup()
 		{
@@ -77,13 +78,15 @@ namespace ICSharpCode.AvalonEdit.Document
 			doc.UndoStack.Undo();
 			Assert.That(doc.Text, Is.Empty);
 		}
-		
+
 		class StubUndoableAction : IUndoableOperation
 		{
+			public int OpType { get; set; }
+
 			public void Undo()
 			{
 			}
-			
+
 			public void Redo()
 			{
 			}

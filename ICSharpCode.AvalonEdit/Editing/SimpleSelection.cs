@@ -61,6 +61,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 		/// <inheritdoc/>
 		public override void ReplaceSelectionWithText(string newText)
 		{
+			if (!textArea.AllowEditing) return;
 			if (newText == null)
 				throw new ArgumentNullException("newText");
 			using (textArea.Document.RunUpdate()) {
@@ -80,8 +81,10 @@ namespace ICSharpCode.AvalonEdit.Editing
 							// place caret so that it ends up behind the new text
 							textArea.Caret.Offset = segmentsToDelete[i].EndOffset;
 						}
+						textArea.Document.UndoStack.SetReasonForStackChange("Remove");
 						textArea.Document.Replace(segmentsToDelete[i], newText);
 					} else {
+						textArea.Document.UndoStack.SetReasonForStackChange("Remove");
 						textArea.Document.Remove(segmentsToDelete[i]);
 					}
 				}

@@ -185,6 +185,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 		{
 			TextArea textArea = GetTextArea(target);
 			if (textArea != null && textArea.IsKeyboardFocused) {
+				textArea.Document.UndoStack.SetReasonForStackChange("Newline " + textArea.Caret.Line);
 				textArea.PerformTextInput("\n");
 				args.Handled = true;
 			}
@@ -245,6 +246,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 			return (target, args) => {
 				TextArea textArea = GetTextArea(target);
 				if (textArea != null && textArea.Document != null) {
+					textArea.Document.UndoStack.SetReasonForStackChange("Delete " + textArea.Caret.Line);
 					if (textArea.Selection.IsEmpty) {
 						TextViewPosition startPos = textArea.Caret.Position;
 						bool enableVirtualSpace = textArea.Options.EnableVirtualSpace;
@@ -314,6 +316,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 		{
 			TextArea textArea = GetTextArea(target);
 			if (textArea != null && textArea.Document != null) {
+				textArea.Document.UndoStack.SetReasonForStackChange("Cut " + textArea.Caret.Line);
 				if (textArea.Selection.IsEmpty && textArea.Options.CutCopyWholeLine) {
 					DocumentLine currentLine = textArea.Document.GetLineByNumber(textArea.Caret.Line);
 					if (CopyWholeLine(textArea, currentLine)) {
@@ -416,6 +419,8 @@ namespace ICSharpCode.AvalonEdit.Editing
 		{
 			TextArea textArea = GetTextArea(target);
 			if (textArea != null && textArea.Document != null) {
+				textArea.Document.UndoStack.SetReasonForStackChange("Paste " + textArea.Caret.Line); 
+
 				IDataObject dataObject;
 				try {
 					dataObject = Clipboard.GetDataObject();
@@ -503,6 +508,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 		{
 			TextArea textArea = GetTextArea(target);
 			if (textArea != null && textArea.Document != null) {
+				textArea.Document.UndoStack.SetReasonForStackChange("Delete line " + textArea.Caret.Line);
 				int firstLineIndex, lastLineIndex;
 				if (textArea.Selection.Length == 0) {
 					// There is no selection, simply delete current line

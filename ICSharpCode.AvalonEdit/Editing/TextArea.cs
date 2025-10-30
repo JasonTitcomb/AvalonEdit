@@ -43,7 +43,34 @@ namespace ICSharpCode.AvalonEdit.Editing
 	public class TextArea : Control, IScrollInfo, IWeakEventListener, ITextEditorComponent, IServiceProvider
 	{
 		internal readonly ImeSupport ime;
-
+		public bool AllowEditing { get; set; }
+		SimpleSegment GetWordAtMousePosition(MouseEventArgs e)
+		{
+			TextView textView = this.textView;
+			if (textView == null) return SimpleSegment.Invalid;
+			Point pos = e.GetPosition(textView);
+			if (pos.Y < 0)
+				pos.Y = 0;
+			if (pos.Y > textView.ActualHeight)
+				pos.Y = textView.ActualHeight;
+			pos += textView.ScrollOffset;
+			VisualLine line = textView.GetVisualLineFromVisualTop(pos.Y);
+			if (line != null) {
+				int visualColumn = line.GetVisualColumn(pos, this.Selection.EnableVirtualSpace);
+				int wordStartVC = line.GetNextCaretPosition(visualColumn + 1, LogicalDirection.Backward, CaretPositioningMode.WordStartOrSymbol, this.Selection.EnableVirtualSpace);
+				if (wordStartVC == -1)
+					wordStartVC = 0;
+				int wordEndVC = line.GetNextCaretPosition(wordStartVC, LogicalDirection.Forward, CaretPositioningMode.WordBorderOrSymbol, this.Selection.EnableVirtualSpace);
+				if (wordEndVC == -1)
+					wordEndVC = line.VisualLength;
+				int relOffset = line.FirstDocumentLine.Offset;
+				int wordStartOffset = line.GetRelativeOffset(wordStartVC) + relOffset;
+				int wordEndOffset = line.GetRelativeOffset(wordEndVC) + relOffset;
+				return new SimpleSegment(wordStartOffset, wordEndOffset - wordStartOffset);
+			} else {
+				return SimpleSegment.Invalid;
+			}
+		}
 		#region Constructor
 		static TextArea()
 		{
@@ -62,6 +89,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 		/// </summary>
 		public TextArea() : this(new TextView())
 		{
+			AllowEditing = true;
 		}
 
 		/// <summary>
@@ -336,6 +364,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 			WeakReference textAreaReference;
 			TextViewPosition caretPosition;
 			Selection selection;
+			public string Description { get; set; }
 			public int OpType { get; set; }
 
 			public RestoreCaretAndSelectionUndoAction(TextArea textArea)
@@ -565,8 +594,7 @@ namespace ICSharpCode.AvalonEdit.Editing
 			ensureSelectionValidRequested = false;
 			if (allowCaretOutsideSelection == 0) {
 				if (!selection.IsEmpty && !selection.Contains(caret.Offset)) {
-					Debug.WriteLine("Resetting selection because caret is outside");
-					this.ClearSelection();
+					Debug.WriteLine("Resetting selection because caret is outside"); this.ClearSelection();
 				}
 			}
 		}
@@ -907,6 +935,9 @@ namespace ICSharpCode.AvalonEdit.Editing
 				throw new ArgumentNullException("e");
 			if (this.Document == null)
 				throw ThrowUtil.NoDocumentAssigned();
+			if (!AllowEditing) return;
+			Document.UndoStack.SetReasonForStackChange("Input " + this.Caret.Line);
+
 			OnTextEntering(e);
 			if (!e.Handled) {
 				if (e.Text == "\n" || e.Text == "\r" || e.Text == "\r\n")
@@ -914,7 +945,11 @@ namespace ICSharpCode.AvalonEdit.Editing
 				else {
 					if (OverstrikeMode && Selection.IsEmpty && Document.GetLineByNumber(Caret.Line).EndOffset > Caret.Offset)
 						EditingCommands.SelectRightByCharacter.Execute(null, this);
-					ReplaceSelectionWithText(e.Text);
+					if (ForceUpperCaseMode) {
+						ReplaceSelectionWithText(e.Text.ToUpper());
+					} else {
+						ReplaceSelectionWithText(e.Text);
+					}
 				}
 				OnTextEntered(e);
 				caret.BringCaretToView();
@@ -923,7 +958,10 @@ namespace ICSharpCode.AvalonEdit.Editing
 
 		void ReplaceSelectionWithNewLine()
 		{
+			if (!AllowEditing) return;
+
 			string newLine = TextUtilities.GetNewLineFromDocument(this.Document, this.Caret.Line);
+			Document.UndoStack.SetReasonForStackChange("Newline " + this.Caret.Line);
 			using (this.Document.RunUpdate()) {
 				ReplaceSelectionWithText(newLine);
 				if (this.IndentationStrategy != null) {
@@ -939,8 +977,10 @@ namespace ICSharpCode.AvalonEdit.Editing
 
 		internal void RemoveSelectedText()
 		{
+			if (!AllowEditing) return;
 			if (this.Document == null)
 				throw ThrowUtil.NoDocumentAssigned();
+			Document.UndoStack.SetReasonForStackChange("RemoveSelected " + this.Caret.Line);
 			selection.ReplaceSelectionWithText(string.Empty);
 #if DEBUG
 			if (!selection.IsEmpty) {
@@ -953,6 +993,8 @@ namespace ICSharpCode.AvalonEdit.Editing
 
 		internal void ReplaceSelectionWithText(string newText)
 		{
+			if (!AllowEditing) return;
+
 			if (newText == null)
 				throw new ArgumentNullException("newText");
 			if (this.Document == null)
@@ -1063,6 +1105,25 @@ namespace ICSharpCode.AvalonEdit.Editing
 				this.isMouseCursorHidden = true;
 				System.Windows.Forms.Cursor.Hide();
 			}
+		}
+
+		#endregion
+
+		#region Uppercase mode
+
+		/// <summary>
+		/// The <see cref="ForceUpperCaseMode"/> dependency property.
+		/// </summary>
+		public static readonly DependencyProperty ForceUpperCaseModeProperty =
+			DependencyProperty.Register("ForceUpperCaseMode", typeof(bool), typeof(TextArea),
+										new FrameworkPropertyMetadata(Boxes.False));
+
+		/// <summary>
+		/// Gets/Sets whether overstrike mode is active.
+		/// </summary>
+		public bool ForceUpperCaseMode {
+			get { return (bool)GetValue(ForceUpperCaseModeProperty); }
+			set { SetValue(ForceUpperCaseModeProperty, value); }
 		}
 
 		#endregion

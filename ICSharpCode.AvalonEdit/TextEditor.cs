@@ -94,6 +94,11 @@ namespace ICSharpCode.AvalonEdit
 				e.Handled = true;
 			}
 		}
+		#region Search
+		Search.SearchResultBackgroundRenderer searchResultBackgroundRenderer;
+
+		#endregion
+
 
 		#region Document property
 		/// <summary>
@@ -295,7 +300,7 @@ namespace ICSharpCode.AvalonEdit
 			return command.CanExecute(null, textArea);
 		}
 
-		void Execute(RoutedUICommand command)
+		public void Execute(RoutedUICommand command)
 		{
 			command.Execute(null, textArea);
 		}
@@ -477,11 +482,14 @@ namespace ICSharpCode.AvalonEdit
 			if ((bool)e.NewValue) {
 				LineNumberMargin lineNumbers = new LineNumberMargin();
 				Line line = (Line)DottedLineMargin.Create();
-				leftMargins.Insert(0, lineNumbers);
-				leftMargins.Insert(1, line);
+				leftMargins.Insert(leftMargins.Count, lineNumbers);
+				leftMargins.Insert(leftMargins.Count, line);
 				var lineNumbersForeground = new Binding("LineNumbersForeground") { Source = editor };
 				line.SetBinding(Line.StrokeProperty, lineNumbersForeground);
 				lineNumbers.SetBinding(Control.ForegroundProperty, lineNumbersForeground);
+
+				var lineNumbersBackround = new Binding("LineNumbersBackground") { Source = editor };
+				lineNumbers.SetBinding(Control.BackgroundProperty, lineNumbersBackround);
 			} else {
 				for (int i = 0; i < leftMargins.Count; i++) {
 					if (leftMargins[i] is LineNumberMargin) {
@@ -522,6 +530,32 @@ namespace ICSharpCode.AvalonEdit
 			}
 		}
 		#endregion
+		#region LineNumbersBackground
+		/// <summary>
+		/// LineNumbersBackground dependency property.
+		/// </summary>
+		public static readonly DependencyProperty LineNumbersBackgroundProperty =
+			DependencyProperty.Register("LineNumbersBackground", typeof(Brush), typeof(TextEditor),
+										new FrameworkPropertyMetadata(Brushes.Gray, OnLineNumbersBackgroundChanged));
+
+		/// <summary>
+		/// Gets/sets the Brush used for displaying the Background color of line numbers.
+		/// </summary>
+		public Brush LineNumbersBackground {
+			get { return (Brush)GetValue(LineNumbersBackgroundProperty); }
+			set { SetValue(LineNumbersBackgroundProperty, value); }
+		}
+
+		static void OnLineNumbersBackgroundChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
+		{
+			TextEditor editor = (TextEditor)d;
+			var lineNumberMargin = editor.TextArea.LeftMargins.FirstOrDefault(margin => margin is LineNumberMargin) as LineNumberMargin; ;
+
+			if (lineNumberMargin != null) {
+				lineNumberMargin.SetValue(Control.BackgroundProperty, e.NewValue);
+			}
+		}
+		#endregion
 
 		#region TextBoxBase-like methods
 		/// <summary>
@@ -536,7 +570,7 @@ namespace ICSharpCode.AvalonEdit
 		/// <summary>
 		/// Begins a group of document changes.
 		/// </summary>
-		public void BeginChange()
+		public void BeginChange(string desc)
 		{
 			GetDocument().BeginUpdate(this.Document.UndoStack.ReasonForStackChange);
 		}
@@ -825,7 +859,9 @@ namespace ICSharpCode.AvalonEdit
 				if (textArea.Document != null) {
 					int offset = this.SelectionStart;
 					int length = this.SelectionLength;
-					textArea.Document.Replace(offset, length, value);
+					if (!(value.Length == 0 && length == 0)){
+						textArea.Document.Replace(offset, length, value);
+					}
 					// keep inserted text selected
 					textArea.Selection = SimpleSelection.Create(textArea, offset, offset + value.Length);
 				}
@@ -923,6 +959,7 @@ namespace ICSharpCode.AvalonEdit
 		/// </remarks>
 		public void Load(Stream stream)
 		{
+			this.Document.UndoStack.SetReasonForStackChange("LoadOriginalFile");
 			using (StreamReader reader = FileReader.OpenStream(stream, this.Encoding ?? Encoding.UTF8)) {
 				this.Text = reader.ReadToEnd();
 				SetCurrentValue(EncodingProperty, reader.CurrentEncoding); // assign encoding after ReadToEnd() so that the StreamReader can autodetect the encoding
@@ -1116,7 +1153,7 @@ namespace ICSharpCode.AvalonEdit
 		/// </summary>
 		public void ScrollTo(int line, int column)
 		{
-			const double MinimumScrollFraction = 0.3;
+			const double MinimumScrollFraction = 0.1;
 			ScrollTo(line, column, VisualYPosition.LineMiddle, null != scrollViewer ? scrollViewer.ViewportHeight / 2 : 0.0, MinimumScrollFraction);
 		}
 
@@ -1155,7 +1192,7 @@ namespace ICSharpCode.AvalonEdit
 						remainingHeight -= vl.Height;
 					}
 				}
-				
+
 				Point p = textArea.TextView.GetVisualPosition(new TextViewPosition(line, Math.Max(1, column)), yPositionMode);
 				double verticalPos = p.Y - referencedVerticalViewPortOffset;
 				if (Math.Abs(verticalPos - scrollViewer.VerticalOffset) > minimumScrollFraction * scrollViewer.ViewportHeight) {
